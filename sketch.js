@@ -21,7 +21,7 @@ function mousePressed() {
       () => classifyStart()
     );
   } else {
-    meowSound.play();
+    meowSound.play(); // 手動測試用
   }
 }
 
@@ -39,12 +39,12 @@ function gotResult(error, results) {
 function draw() {
   background(0);
 
-  // 鏡像翻轉畫面，讓左右變正常
+  // 鏡像翻轉，畫面變正常
   translate(width, 0);
   scale(-1, 1);
   image(video, 0, 0);
 
-  // 顯示目前 AI 分類結果
+  // 顯示現在分類結果
   fill(255);
   textSize(32);
   textAlign(LEFT);
@@ -62,4 +62,3 @@ function draw() {
     text("已觸發！Touching_Cat", 10, 80);
   }
 }
-
