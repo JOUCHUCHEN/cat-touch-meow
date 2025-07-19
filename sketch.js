@@ -1,6 +1,7 @@
 let classifier, video, label = "";
 let meowSound;
 let userStarted = false;
+let recentlyPlayed = false;
 
 function preload() {
   meowSound = loadSound('cat-is-purring-27823.mp3');
@@ -31,11 +32,13 @@ function gotResult(error, results) {
   if (error) return console.error(error);
   label = results[0].label;
 
-  if (label === "Touching_Cat" && !meowSound.isPlaying()) {
+  if (label === "Touching_Cat" && !recentlyPlayed) {
     meowSound.play();
+    recentlyPlayed = true;
     setTimeout(() => {
       meowSound.stop();
-    }, 1000); // 1 秒停止
+      recentlyPlayed = false;
+    }, 1000);
   }
   
   classifyStart();
@@ -44,14 +47,14 @@ function gotResult(error, results) {
 function draw() {
   background(0);
 
-  // 鏡像反轉影片畫面
+  // 鏡像翻轉鏡頭
   push();
   translate(width, 0);
   scale(-1, 1);
   image(video, 0, 0);
   pop();
 
-  // 文字正常方向
+  // 文字正常畫
   fill(255);
   textSize(32);
   textAlign(LEFT);
