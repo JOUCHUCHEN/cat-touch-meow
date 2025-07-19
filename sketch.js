@@ -1,9 +1,10 @@
 let classifier, video, label = "";
-let meowSound;
+let meowSound, catImage;
 let userStarted = false;
 
 function preload() {
   meowSound = loadSound('cat-is-purring-27823.mp3');
+  catImage = loadImage('cat.png'); // 這是貓咪圖片
 }
 
 function setup() {
@@ -34,6 +35,8 @@ function gotResult(error, results) {
 function draw() {
   background(0);
   image(video, 0, 0);
+  image(catImage, width / 2 - 100, height / 2 - 100, 200, 200); // 顯示貓在畫面中間
+  
   fill(255);
   textSize(32);
   textAlign(LEFT);
