@@ -18,22 +18,33 @@ function mousePressed() {
     userStarted = true;
     classifier = ml5.imageClassifier(
       'https://teachablemachine.withgoogle.com/models/QnJMdBDOh/model.json',
-      video,
-      () => classifier.classify(gotResult)
+      () => classifyStart()
     );
+  } else {
+    meowSound.play();
   }
+}
+
+function classifyStart() {
+  classifier.classify(video, gotResult);
 }
 
 function gotResult(error, results) {
   if (error) return console.error(error);
   label = results[0].label;
   if (label === "Touching_Cat" && !meowSound.isPlaying()) meowSound.play();
-  classifier.classify(gotResult);
+  classifyStart();
 }
 
 function draw() {
   background(0);
+
+  // 鏡像翻轉畫面，讓左右變正常
+  translate(width, 0);
+  scale(-1, 1);
   image(video, 0, 0);
+
+  // 顯示目前 AI 分類結果
   fill(255);
   textSize(32);
   textAlign(LEFT);
