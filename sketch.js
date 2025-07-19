@@ -17,7 +17,7 @@ function mousePressed() {
   if (!userStarted) {
     userStarted = true;
     classifier = ml5.imageClassifier(
-      'https://teachablemachine.withgoogle.com/models/UYk5d1ceR/model.json',
+      'https://teachablemachine.withgoogle.com/models/QnJMdBDOh/model.json',
       video,
       () => classifier.classify(gotResult)
     );
