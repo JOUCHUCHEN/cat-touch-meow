@@ -4,7 +4,7 @@ let userStarted = false;
 
 function preload() {
   meowSound = loadSound('cat-is-purring-27823.mp3');
-  catImage = loadImage('cat.png'); // 這是貓咪圖片
+  catImage = loadImage('sleeping cat.png'); // 這是貓咪圖片
 }
 
 function setup() {
