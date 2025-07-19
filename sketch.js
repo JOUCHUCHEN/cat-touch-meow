@@ -15,7 +15,7 @@ function setup() {
 
 function mousePressed() {
   if (!userStarted) {
-    userStarted = true;						
+    userStarted = true;
     classifier = ml5.imageClassifier(
       'https://teachablemachine.withgoogle.com/models/QnJMdBDOh/model.json',
       video,
@@ -42,6 +42,6 @@ function draw() {
   if (!userStarted) {
     fill(255, 0, 0);
     textSize(24);
-    text("請點一下畫面啟動", 10, 50);
+    text("請點一下畫面才能開始", 10, 50);
   }
 }
