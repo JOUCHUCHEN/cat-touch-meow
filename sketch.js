@@ -1,5 +1,6 @@
 let classifier, video, label = "";
 let meowSound;
+let userStarted = false;
 
 function preload() {
   meowSound = loadSound('https://purr.objects-us-east-1.dream.io/Purr.ogg');
@@ -10,12 +11,17 @@ function setup() {
   video = createCapture(VIDEO);
   video.size(640, 480);
   video.hide();
+}
 
-  classifier = ml5.imageClassifier(
-    'https://teachablemachine.withgoogle.com/models/UYk5d1ceR/model.json',
-    video,
-    () => classifier.classify(gotResult)
-  );
+function mousePressed() {
+  if (!userStarted) {
+    userStarted = true;
+    classifier = ml5.imageClassifier(
+      'https://teachablemachine.withgoogle.com/models/UYk5d1ceR/model.json',
+      video,
+      () => classifier.classify(gotResult)
+    );
+  }
 }
 
 function gotResult(error, results) {
@@ -32,4 +38,10 @@ function draw() {
   textSize(32);
   textAlign(LEFT);
   text("現在分類：" + label, 10, height - 20);
+
+  if (!userStarted) {
+    fill(255, 0, 0);
+    textSize(24);
+    text("點一下畫面才能開始", 10, 50);
+  }
 }
