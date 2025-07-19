@@ -3,7 +3,7 @@ let meowSound;
 let userStarted = false;
 
 function preload() {
-  meowSound = loadSound('https://purr.objects-us-east-1.dream.io/Purr.ogg');
+  meowSound = loadSound('cat-is-purring-27823.mp3');
 }
 
 function setup() {
