@@ -15,7 +15,7 @@ function setup() {
 
 function mousePressed() {
   if (!userStarted) {
-    userStarted = true;
+    userStarted = true;						
     classifier = ml5.imageClassifier(
       'https://teachablemachine.withgoogle.com/models/QnJMdBDOh/model.json',
       video,
