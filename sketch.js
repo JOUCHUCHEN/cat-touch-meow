@@ -20,8 +20,6 @@ function mousePressed() {
       'https://teachablemachine.withgoogle.com/models/QnJMdBDOh/model.json',
       () => classifyStart()
     );
-  } else {
-    meowSound.play(); // 手動測試用
   }
 }
 
@@ -32,19 +30,28 @@ function classifyStart() {
 function gotResult(error, results) {
   if (error) return console.error(error);
   label = results[0].label;
-  if (label === "Touching_Cat" && !meowSound.isPlaying()) meowSound.play();
+
+  if (label === "Touching_Cat" && !meowSound.isPlaying()) {
+    meowSound.play();
+    setTimeout(() => {
+      meowSound.stop();
+    }, 1000); // 1 秒停止
+  }
+  
   classifyStart();
 }
 
 function draw() {
   background(0);
 
-  // 鏡像翻轉，畫面變正常
+  // 鏡像反轉影片畫面
+  push();
   translate(width, 0);
   scale(-1, 1);
   image(video, 0, 0);
+  pop();
 
-  // 顯示現在分類結果
+  // 文字正常方向
   fill(255);
   textSize(32);
   textAlign(LEFT);
