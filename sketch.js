@@ -44,4 +44,11 @@ function draw() {
     textSize(24);
     text("請點一下畫面才能開始", 10, 50);
   }
+
+  if (label === "Touching_Cat") {
+    fill(0, 255, 0);
+    textSize(24);
+    text("已觸發！Touching_Cat", 10, 80);
+  }
 }
+
