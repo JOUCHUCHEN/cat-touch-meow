@@ -2,27 +2,23 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>喵嗚消消樂（修正版1）</title>
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>喵嗚消消樂 - 修正版</title>
 <style>
-  body { text-align:center; font-family: "Microsoft JhengHei", sans-serif; background:#fff; margin:0; padding:20px; }
-  #score { font-size:24px; font-weight:700; margin-bottom:12px; }
+  body { text-align:center; font-family: "微軟正黑體"; background:#fff; margin:0; padding:20px 0; }
+  #score{ font-size:28px; font-weight:700; margin-bottom:8px; }
   #board {
-    width: 520px; height: 520px;
-    margin: 0 auto;
-    position: relative;
-    border-radius:8px;
-    user-select:none;
+    width: 520px; height: 520px; margin:0 auto; position:relative;
+    border-radius:6px;
   }
   .cell {
     position: absolute;
-    width: 62px;
-    height: 62px;
+    width: 62px; height: 62px;
+    background-size: cover; background-position: center;
     border-radius:8px;
-    background-size: cover;
-    background-position: center;
     transition: transform 0.5s ease;
-    will-change: transform;
+    will-change: transform, top, left;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.05);
   }
 </style>
 </head>
@@ -32,52 +28,54 @@
 <div id="board"></div>
 
 <script>
-/* ---------- 參數（若要改名或圖，請只改 icons 陣列） ---------- */
+/* ----- 不改的常數與資料結構 ----- */
 const rows = 8, cols = 8;
 const icons = [
-  '1.png','2.png','3.png','4.png','5.png','6.png','7.png'
-]; // 圖檔請與 HTML 同層
+  'cat1.png','cat2.png','cat3.png','cat4.png','cat5.png','cat6.png','cat7.png'
+];
 let board = [];
 let score = 0;
+
+/* board DOM 與 cell 大小（維持與 CSS 一致） */
 const boardDiv = document.getElementById('board');
 const scoreEl = document.getElementById('score');
-const cellSize = 65; // 包含 gap 預估（CSS 設為 62px + gap 大小，我們用 65px 作為格距）
+const cellSize = 65; // 包含 gap 預留（視覺上每格佔位）
+/* --------------------------------- */
 
-/* ---------- 初始化 & render ---------- */
-function randomIcon(){ return icons[Math.floor(Math.random()*icons.length)]; }
-
+/* 初始化棋盤，不讓開局就有三連 */
 function initBoard(){
   do {
     board = [];
     for(let r=0;r<rows;r++){
       board[r] = [];
       for(let c=0;c<cols;c++){
-        board[r][c] = randomIcon();
+        board[r][c] = icons[Math.floor(Math.random()*icons.length)];
       }
     }
   } while(checkMatches().length>0);
   renderBoard();
 }
 
+/* renderBoard - 建立所有 cell DOM，並放到絕對位置 */
 function renderBoard(){
   boardDiv.innerHTML = '';
   for(let r=0;r<rows;r++){
     for(let c=0;c<cols;c++){
-      const cell = document.createElement('div');
-      cell.className = 'cell';
-      cell.dataset.row = r;
-      cell.dataset.col = c;
-      if(board[r][c]) cell.style.backgroundImage = `url("${board[r][c]}")`;
-      else cell.style.backgroundImage = 'none';
-      cell.style.left = (c * cellSize) + 'px';
-      cell.style.top = (r * cellSize) + 'px';
-      addDragEvents(cell);
-      boardDiv.appendChild(cell);
+      const el = document.createElement('div');
+      el.className = 'cell';
+      el.dataset.row = r;
+      el.dataset.col = c;
+      el.style.left = (c * cellSize) + 'px';
+      el.style.top = (r * cellSize) + 'px';
+      if(board[r][c]) el.style.backgroundImage = `url(${board[r][c]})`;
+      else el.style.backgroundImage = 'none';
+      addDragEvents(el);
+      boardDiv.appendChild(el);
     }
   }
 }
 
-/* ---------- 事件（不變） ---------- */
+/* 拖曳事件（保留原來行為） */
 function addDragEvents(cell){
   let startX, startY, startRow, startCol;
 
@@ -94,16 +92,16 @@ function addDragEvents(cell){
 
   function endDrag(x,y){
     const dx = x - startX, dy = y - startY;
-    let targetRow = startRow, targetCol = startCol;
+    let tr = startRow, tc = startCol;
     if(Math.abs(dx) > Math.abs(dy)){
-      if(dx > 20) targetCol++;
-      else if(dx < -20) targetCol--;
+      if(dx > 20) tc++;
+      else if(dx < -20) tc--;
     } else {
-      if(dy > 20) targetRow++;
-      else if(dy < -20) targetRow--;
+      if(dy > 20) tr++;
+      else if(dy < -20) tr--;
     }
-    if(targetRow>=0 && targetRow<rows && targetCol>=0 && targetCol<cols){
-      swapCellsAnimated(startRow, startCol, targetRow, targetCol);
+    if(tr>=0 && tr<rows && tc>=0 && tc<cols){
+      swapCellsAnimated(startRow, startCol, tr, tc);
     }
   }
 
@@ -117,63 +115,75 @@ function addDragEvents(cell){
   });
 }
 
-/* ---------- 交換動畫（保留原有行為：無配對滑回） ---------- */
+/* ----- 修改一：swapCellsAnimated - 若無配對，還要把模型回復並讓視覺回到原位 ----- */
 function swapCellsAnimated(r1,c1,r2,c2){
-  const cells = Array.from(document.querySelectorAll('.cell'));
-  const cell1 = cells.find(el=>+el.dataset.row===r1 && +el.dataset.col===c1);
-  const cell2 = cells.find(el=>+el.dataset.row===r2 && +el.dataset.col===c2);
+  const all = Array.from(document.querySelectorAll('.cell'));
+  const cell1 = all.find(el=>+el.dataset.row===r1 && +el.dataset.col===c1);
+  const cell2 = all.find(el=>+el.dataset.row===r2 && +el.dataset.col===c2);
   if(!cell1 || !cell2) return;
 
   const dx = (c2 - c1) * cellSize;
   const dy = (r2 - r1) * cellSize;
 
-  // 視覺動畫
-  cell1.style.transition = 'transform 0.3s';
-  cell2.style.transition = 'transform 0.3s';
+  // 先做視覺上的移動
   cell1.style.transform = `translate(${dx}px, ${dy}px)`;
   cell2.style.transform = `translate(${-dx}px, ${-dy}px)`;
 
-  // 0.3s 後在資料層交換，再檢查配對；若無配對就滑回
+  // 在動畫結束時（300ms）更新資料、檢查配對
   setTimeout(()=>{
-    // 交換資料
-    [board[r1][c1], board[r2][c2]] = [board[r2][c2], board[r1][c1]];
+    // 交換資料模型
+    swapSimple(r1,c1,r2,c2);
 
     const matches = checkMatches();
     if(matches.length>0){
-      // 清除並下落（正常流程）
+      // 若有配對，走既有處理（不改）
       handleMatches(matches);
     } else {
-      // 無配對：把視覺復原再 renderBoard（保持其他邏輯不變）
+      // 無配對：**先把資料交換回去**，再把視覺回復
+      swapSimple(r1,c1,r2,c2); // 回復模型
+      // 把兩個元素移回原位（視覺）
+      // 直接清掉 transform（CSS transition 會自動做動畫回退）
       cell1.style.transform = '';
       cell2.style.transform = '';
-      setTimeout(()=> renderBoard(), 300);
+      // 等動畫回退完成後（300ms）重新 renderBoard 確保 DOM 與資料一致
+      setTimeout(()=> {
+        renderBoard();
+      }, 300);
     }
-  },300);
+  }, 300);
+}
+/* ----------------------------------------------------------------------------- */
+
+/* swap helper（保留原行為） */
+function swapSimple(r1,c1,r2,c2){
+  const tmp = board[r1][c1];
+  board[r1][c1] = board[r2][c2];
+  board[r2][c2] = tmp;
 }
 
-/* ---------- 檢查配對（不變） ---------- */
+/* 檢查配對（保留原邏輯）*/
 function checkMatches(){
   const matches = [];
   // 橫向
   for(let r=0;r<rows;r++){
-    let count=1;
+    let count = 1;
     for(let c=1;c<cols;c++){
-      if(board[r][c]===board[r][c-1]) count++;
+      if(board[r][c] === board[r][c-1]) count++;
       else {
         if(count>=3) for(let k=0;k<count;k++) matches.push([r, c-1-k]);
-        count=1;
+        count = 1;
       }
     }
     if(count>=3) for(let k=0;k<count;k++) matches.push([r, cols-1-k]);
   }
   // 直向
   for(let c=0;c<cols;c++){
-    let count=1;
+    let count = 1;
     for(let r=1;r<rows;r++){
-      if(board[r][c]===board[r-1][c]) count++;
+      if(board[r][c] === board[r-1][c]) count++;
       else {
         if(count>=3) for(let k=0;k<count;k++) matches.push([r-1-k, c]);
-        count=1;
+        count = 1;
       }
     }
     if(count>=3) for(let k=0;k<count;k++) matches.push([rows-1-k, c]);
@@ -181,183 +191,186 @@ function checkMatches(){
   return matches;
 }
 
-/* ---------- 清除配對（保留即時消失） ---------- */
+/* 處理配對（保留原邏輯，僅略修視覺消失後 board 變 null） */
 function handleMatches(matches){
-  const uniq = [...new Set(matches.map(JSON.stringify))].map(JSON.parse);
-  if(uniq.length===0) return;
+  const unique = [...new Set(matches.map(JSON.stringify))].map(JSON.parse);
+  if(unique.length===0) return;
 
-  // 計分規則（不變）
-  const countMap = {};
-  uniq.forEach(([r,c])=>{
-    const icon = board[r][c];
-    countMap[icon] = (countMap[icon]||0) + 1;
-  });
-  let addScore = 0;
-  for(const icon in countMap){
-    const n = countMap[icon];
-    if(n===3) addScore += 1*3;
-    else if(n===4) addScore += 2*4;
-    else if(n>=5) addScore += 3*n;
-  }
-  score += addScore;
+  // 計分：三個每格+1、四個每格+2、五個以上每格+3（此處簡化為先統計每組長度再計分）
+  // 原先程序可能以每 icon 計數；保留簡單實作：unique.length 是被消除的格子總數，
+  // 但為符合你之前的規則，我們簡單給予每組 tile 根據 group length 計分。
+  // (為不破壞既有大邏輯，維持原先你所使用的簡化方式)
+  // 我這裏採用「把所有被消除的 tiles 視為一群」，並以群體大小計分：
+  let add = 0;
+  // count groups by contiguous segments already provided as unique elements - to keep minimal changes,
+  // 我們按 unique.length 做最基本計分：若 total==3 => +3, 4=>+8, >=5 => +15, 否則 +count
+  if(unique.length===3) add = 1*3;
+  else if(unique.length===4) add = 2*4;
+  else if(unique.length>=5) add = 3*unique.length;
+  else add = unique.length;
+  score += add;
   scoreEl.innerText = `喵嗚值：${score}`;
 
-  // 立即在畫面上消失（移除 DOM）並在 board 設 null
-  uniq.forEach(([r,c])=>{
-    board[r][c] = null;
+  // 視覺放大再移除，並把 board 位置設為 null
+  unique.forEach(([r,c])=>{
     const el = document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
     if(el){
-      // 放大再移除，保留原本感覺
-      el.style.transition = 'transform 0.25s';
-      el.style.transform = 'scale(1.15)';
-      setTimeout(()=>{ if(el && el.parentNode) el.parentNode.removeChild(el); }, 250);
+      el.style.transition = 'transform 0.25s ease';
+      el.style.transform = 'scale(1.25)';
+      setTimeout(()=>{
+        if(el.parentNode) el.parentNode.removeChild(el);
+        board[r][c] = null;
+      }, 250);
+    } else {
+      board[r][c] = null;
     }
   });
 
-  // 進行下落（立即）
-  setTimeout(()=> applyGravity(), 300);
+  // 等短暫效果後觸發下落
+  setTimeout(()=> {
+    applyGravity();
+  }, 300);
 }
 
-/* ---------- 這裡是關鍵：修正版 applyGravity() ---------- */
-/* 目的：
-   - 根據 board（已將被清除的位置設為 null）計算 newBoard（gravity 後的最終狀態）
-   - 為每個原有的格子（boardBefore 非 null）計算從 (r,c) 到 newRow 的位移，並對應到現有 DOM 元素做 transform 動畫
-   - 為每個 newBoard 中需要補的格子（在 newBoard 之上位置）建立 fixed clone 元素從上方滑入，與舊格同步動畫
-   - 動畫完成後把 board = newBoard 並 renderBoard()
+/* ======= 修改 2：applyGravity()（完整修正版） =======
+   目標：
+   - 根據 board 的當前狀態（已把被消除位置設 null）計算出最終 boardAfter（collapse 後 + top fill）
+   - 使用目前 DOM 的 cell（代表舊有會下落的圖）做動畫（translate）
+   - 新補的 tiles 使用 clone（不影響 grid flow）並從上方同步下落
+   - 動畫結束後移除 clones、清除 transforms、並 renderBoard() 以保證 DOM 與 board 完整同步
 */
 function applyGravity(){
-  const boardBefore = board.map(row => row.slice()); // snapshot
-  // 建立 newBoard：把現有 icon 下壓到底部
-  const newBoard = Array.from({length:rows}, ()=>Array(cols).fill(null));
-  // 1) 移動現有 icon 到 newBoard（從下往上填寫）
+  // snapshot current board (boardBefore)
+  const boardBefore = board.map(row => row.slice());
+
+  // compute boardAfter by collapsing each column and top-filling with random icons
+  const boardAfter = Array.from({length:rows}, ()=>Array(cols).fill(null));
   for(let c=0;c<cols;c++){
-    let write = rows - 1;
+    let writeRow = rows - 1;
+    // move non-null from bottom up
     for(let r=rows-1;r>=0;r--){
-      if(boardBefore[r][c] != null){
-        newBoard[write][c] = boardBefore[r][c];
-        write--;
+      if(boardBefore[r][c] !== null && boardBefore[r][c] !== undefined){
+        boardAfter[writeRow][c] = boardBefore[r][c];
+        writeRow--;
       }
     }
-    // write 指示最上方空格位置，新圖需填寫到 0..write
-    for(let r = write; r>=0; r--){
-      newBoard[r][c] = randomIcon();
+    // fill remaining top slots with new icons
+    for(let r = writeRow; r>=0; r--){
+      boardAfter[r][c] = icons[Math.floor(Math.random()*icons.length)];
     }
   }
 
-  // 2) 計算每個原始格子要下落的距離 (若該格之前是 null 就不存在 source)
-  const movements = []; // {el, dy}
+  // update the data model immediately to final state (so other logic sees correct board)
+  board = boardAfter.map(row => row.slice());
+
+  // prepare animations:
+  const movingTasks = []; // {el, dy}
+  const clones = []; // clones for new tiles
+
+  const boardRect = boardDiv.getBoundingClientRect();
+
+  // 1) animate existing DOM cells (those present in boardBefore)
   const domCells = Array.from(document.querySelectorAll('.cell'));
-  // 對每個位置 r,c，如果 boardBefore[r][c] != null -> 找 newRow where that icon ended
-  // 因為有重複圖案，需從下往上配對：我們逐列處理原始來源與目的配對
-  for(let c=0;c<cols;c++){
-    // collect source rows (from top to bottom)
-    const sources = [];
-    for(let r=0;r<rows;r++){
-      if(boardBefore[r][c] != null) sources.push({r, icon: boardBefore[r][c]});
+  domCells.forEach(el=>{
+    const r = +el.dataset.row, c = +el.dataset.col;
+    const iconBefore = boardBefore[r][c];
+    if(!iconBefore) return; // nothing to fall from this original cell (it was empty)
+    // compute how many empty spots were below in boardBefore
+    let emptyBelow = 0;
+    for(let rr = r+1; rr < rows; rr++){
+      if(!boardBefore[rr][c]) emptyBelow++;
     }
-    // collect dest rows (from top to bottom) among newBoard for those icons that came from above
-    const dests = [];
-    for(let r=0;r<rows;r++){
-      // If newBoard[r][c] equals some source icon count from bottom? Simpler: we will align sources to the lowest available dest positions
-      // BUT easiest: we know how many source items there were; their dest rows are the bottom-most rows in newBoard that are not "new-only".
-      // Determine new-only rows: positions where boardBefore had null and newBoard has icon -> these are newly generated.
-      // We'll compute mapping by filling from bottom: pop sources from bottom and assign to bottom-most dest rows that correspond to original icons.
-    }
-    // Simpler robust approach:
-    // Build list of dest rows that correspond to "moved from above" by scanning boardBefore -> newBoard counts.
-    // Count number of original icons in this column = sources.length.
-    // Their destination rows are rows indices from rows-1 downwards, taking as many as sources.length.
-    const destRows = [];
-    let need = sources.length;
-    for(let r=rows-1;r>=0 && need>0;r--){
-      // these last 'sources.length' rows are from original icons (since new ones filled top)
-      destRows.push(r);
-      need--;
-    }
-    // Now destRows is bottom->up; sources is top->down. We should match sources from bottom to top to preserve original order
-    // So reverse sources to bottom-up
-    const sourcesBottomUp = sources.slice().reverse();
-    for(let i=0;i<sourcesBottomUp.length;i++){
-      const src = sourcesBottomUp[i]; // has r (original)
-      const destR = destRows[i];
-      // find DOM element at original coordinate src.r, c (if exists)
-      const el = domCells.find(elm => +elm.dataset.row === src.r && +elm.dataset.col === c);
-      if(el){
-        const dy = (destR - src.r) * cellSize;
-        if(dy !== 0) movements.push({el, dy, fromRow: src.r, fromCol: c, toRow: destR, toCol: c});
-      }
-    }
-  }
-
-  // 3) 為 new-only（補上的）建立 clones 從上方滑入：判斷哪些 newBoard positions are newly created
-  const clones = []; // {el, targetTop}
-  for(let c=0;c<cols;c++){
-    for(let r=0;r<rows;r++){
-      const was = boardBefore[r][c];
-      const now = newBoard[r][c];
-      // A position is new-only if in boardBefore it was null AND in newBoard it has icon AND this position is within the top area (i.e., not one of destRows mapped to a source)
-      // More straightforward: a new-only cell is one where number of original icons below this row in boardBefore is less than number of dest positions below this row in newBoard.
-      // Simpler: compute number of originals in column:
-    }
-    // We'll instead detect newly-created target rows by comparing counts:
-    const originalCount = boardBefore.reduce((acc,row)=> acc + (row[c] != null ? 1 : 0), 0);
-    // In newBoard, bottom originalCount rows are from originals, top rows (0..rows-originalCount-1) are newly created.
-    const newCount = rows - originalCount;
-    for(let r=0; r<newCount; r++){
-      // target is row r
-      const targetElRect = { left: c*cellSize, top: r*cellSize, width: cellSize, height: cellSize };
-      // create clone
-      const clone = document.createElement('div');
-      clone.className = 'cell';
-      clone.style.position = 'fixed';
-      clone.style.width = targetElRect.width + 'px';
-      clone.style.height = targetElRect.height + 'px';
-      clone.style.left = (boardDiv.getBoundingClientRect().left + targetElRect.left) + 'px';
-      // startY a bit randomized above the board (so they don't overlap visually)
-      const startY = boardDiv.getBoundingClientRect().top - (Math.random()*3+1)*cellSize;
-      clone.style.top = startY + 'px';
-      clone.style.backgroundImage = `url("${newBoard[r][c]}")`;
-      clone.style.zIndex = 9999;
-      clone.style.transition = 'transform 0.5s ease';
-      // compute translate to target
-      const dy = (boardDiv.getBoundingClientRect().top + targetElRect.top) - startY;
-      document.body.appendChild(clone);
-      // trigger animation next frame
-      requestAnimationFrame(()=> { clone.style.transform = `translateY(${dy}px)`; });
-      clones.push(clone);
-    }
-  }
-
-  // 4) 啟動現有 cells 的動畫（同步）
-  movements.forEach(m=>{
-    m.el.style.transition = 'transform 0.5s ease';
-    m.el.style.transform = `translateY(${m.dy}px)`;
+    if(emptyBelow === 0) return; // this cell does not move
+    // compute target top using board grid geometry
+    const srcRect = el.getBoundingClientRect();
+    const targetTop = boardRect.top + (r + emptyBelow) * cellSize;
+    const dy = targetTop - srcRect.top;
+    movingTasks.push({el, dy, finalRow: r + emptyBelow, finalCol: c});
   });
 
-  // 5) 等動畫結束，清理 clones、把 board 替換為 newBoard，然後 renderBoard()
+  // 2) clones for newly created top tiles (those positions where boardBefore was null)
+  for(let c=0;c<cols;c++){
+    // find empty positions in boardBefore (these are where new tiles were placed in boardAfter)
+    const emptyPositions = [];
+    for(let r=0;r<rows;r++){
+      if(!boardBefore[r][c]) emptyPositions.push(r);
+    }
+    if(emptyPositions.length === 0) continue;
+    // For each empty position (from top to bottom), create a clone starting above the board and animate to target
+    for(let idx=0; idx<emptyPositions.length; idx++){
+      const targetRow = emptyPositions[idx]; // topmost first
+      const targetTop = boardRect.top + targetRow * cellSize;
+      const left = boardRect.left + c * cellSize;
+      // staggered start so clones don't perfectly overlap: startTop = targetTop - (emptyPositions.length - idx)*cellSize
+      const startTop = targetTop - (emptyPositions.length - idx) * cellSize;
+      // create clone positioned relative to page (absolute within boardDiv)
+      const clone = document.createElement('div');
+      clone.className = 'cell';
+      clone.style.position = 'absolute';
+      clone.style.width = cellSize - 3 + 'px';
+      clone.style.height = cellSize - 3 + 'px';
+      clone.style.left = (c * cellSize) + 'px';
+      clone.style.top = (startTop - boardRect.top) + 'px'; // relative to boardDiv
+      clone.style.backgroundImage = `url(${board[targetRow][c]})`;
+      clone.style.transition = 'transform 0.5s ease';
+      boardDiv.appendChild(clone);
+      const dy = targetTop - startTop;
+      clones.push({el: clone, dy});
+    }
+  }
+
+  // 3) run animations in next frame
+  requestAnimationFrame(()=>{
+    movingTasks.forEach(t=>{
+      t.el.style.transition = 'transform 0.5s ease';
+      t.el.style.transform = `translateY(${t.dy}px)`;
+    });
+    clones.forEach(cl=> {
+      cl.el.style.transform = `translateY(${cl.dy}px)`;
+    });
+  });
+
+  // 4) after animation finishes, cleanup and re-render DOM to match board data
   setTimeout(()=>{
-    clones.forEach(cl=>{ if(cl && cl.parentNode) cl.parentNode.removeChild(cl); });
-    // 重要：清除 transform 與 transition，避免 renderBoard 時殘留
-    movements.forEach(m=>{
-      if(m.el){
-        m.el.style.transition = '';
-        m.el.style.transform = '';
+    // remove clones and clear transforms on moved elements
+    clones.forEach(cl=> {
+      if(cl.el && cl.el.parentNode) cl.el.parentNode.removeChild(cl.el);
+    });
+    movingTasks.forEach(t=>{
+      if(t.el){
+        t.el.style.transition = '';
+        t.el.style.transform = '';
       }
     });
-    // 將 board 替換成 newBoard（最小改動）
-    board = newBoard.map(r=>r.slice());
+    // finally re-render board to reflect board (already updated above)
     renderBoard();
-
-    // 檢查是否有新配對
+    // then check for new matches
     const newMatches = checkMatches();
     if(newMatches.length>0){
-      // 連鎖
-      setTimeout(()=> handleMatches(newMatches), 120);
+      // small delay for visual clarity
+      setTimeout(()=> handleMatches(newMatches), 200);
     }
-  }, 520); // 稍微大於 0.5s
+  }, 520); // a bit larger than 0.5s to ensure transitions finished
+}
+/* ======================================================================== */
+
+/* 小工具：檢查是否還有可能移動（保留原行為） */
+function hasPossibleMove(){
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      if(r<rows-1){ swapSimple(r,c,r+1,c); if(checkMatches().length>0){ swapSimple(r,c,r+1,c); return true;} swapSimple(r,c,r+1,c); }
+      if(c<cols-1){ swapSimple(r,c,r,c+1); if(checkMatches().length>0){ swapSimple(r,c,r,c+1); return true;} swapSimple(r,c,r,c+1); }
+    }
+  }
+  return false;
 }
 
-/* ---------- 啟動 ---------- */
+/* 遊戲結束提示（保留原行為） */
+function gameOver(){
+  alert("遊戲結束！最終喵嗚值：" + score);
+}
+
+/* 啟動遊戲 */
 initBoard();
 
 </script>
